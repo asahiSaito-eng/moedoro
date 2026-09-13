@@ -32,7 +32,6 @@
   const timerSeconds = document.getElementById('timer-seconds'); // 互換用
   const timerSeparator = document.getElementById('timer-separator');
   const phaseText = document.getElementById('phase-text');
-  const currentTimeEl = document.getElementById('current-time');
   const btnPause = document.getElementById('btn-pause');
   const btnSpeed = document.getElementById('btn-speed');
   const btnSound = document.getElementById('btn-sound');
@@ -1396,16 +1395,6 @@
   }
 
   /* ======================
-     Current Time Display
-     ====================== */
-  function updateCurrentTime() {
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    currentTimeEl.textContent = hh + ':' + mm;
-  }
-
-  /* ======================
      Settings Modal
      ====================== */
   function openSettings() {
@@ -1591,10 +1580,7 @@
     initHeartBobbing(); // ★常時上下ゆらゆら揺れを開始！
     calculateSchedule();
     updateTimerDisplay(true);
-    updateCurrentTime();
     updatePauseIcon();
-
-    setInterval(updateCurrentTime, 10000);
 
     gsap.fromTo('#timer-split-container', { opacity: 0 }, { opacity: 1, duration: 1.5, ease: 'power2.out', delay: 0.3 });
     gsap.fromTo('#controls', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 1.2, ease: 'power2.out', delay: 0.6 });
