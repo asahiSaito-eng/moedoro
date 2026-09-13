@@ -44,6 +44,8 @@
   const settingsModal = document.getElementById('settings-modal');
   const inputFocus = document.getElementById('input-focus');
   const inputBreak = document.getElementById('input-break');
+  const selectSpeed = document.getElementById('select-speed');
+  const btnOpenEditor = document.getElementById('btn-open-editor');
   const btnSave = document.getElementById('btn-save-settings');
   const btnCancel = document.getElementById('btn-cancel-settings');
 
@@ -70,7 +72,7 @@
   let isRunning = false;
   let isFirstStart = true;    // デバッグ用: 初回スタート時にscatter
   let timerInterval = null;
-  let timerSpeed = 30;        // テスト用30倍速 (ボタンで1xと切替可能)
+  let timerSpeed = 1;         // デフォルト1倍速 (通常速度)
   let fragments = [];         // DOM elements for each fragment
   let fragmentsMoved = [];    // Tracks which fragments have been moved to heart position
   let scheduleTimings = [];   // The second-marks at which each fragment should move
@@ -1381,7 +1383,17 @@
   });
 
   edClose.addEventListener('click', toggleEditorMode);
-  btnEditor.addEventListener('click', toggleEditorMode);
+  if (btnEditor) {
+    btnEditor.addEventListener('click', toggleEditorMode);
+  }
+  if (btnOpenEditor) {
+    btnOpenEditor.addEventListener('click', () => {
+      closeSettings();
+      setTimeout(() => {
+        if (!isEditorMode) toggleEditorMode();
+      }, 200);
+    });
+  }
 
   /* ======================
      Current Time Display
@@ -1400,6 +1412,9 @@
     if (isRunning) stopTimer();
     inputFocus.value = FOCUS_MINUTES;
     inputBreak.value = BREAK_MINUTES;
+    if (selectSpeed) {
+      selectSpeed.value = String(timerSpeed);
+    }
     settingsModal.style.display = 'flex';
     gsap.fromTo(settingsModal, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power2.out' });
   }
@@ -1418,9 +1433,11 @@
   function saveSettings() {
     const newFocus = parseInt(inputFocus.value, 10);
     const newBreak = parseInt(inputBreak.value, 10);
+    const newSpeed = selectSpeed ? (parseInt(selectSpeed.value, 10) || 1) : 1;
 
     if (newFocus >= 1 && newFocus <= 90) FOCUS_MINUTES = newFocus;
     if (newBreak >= 1 && newBreak <= 30) BREAK_MINUTES = newBreak;
+    timerSpeed = newSpeed;
 
     phase = 'focus';
     totalSeconds = FOCUS_MINUTES * 60;

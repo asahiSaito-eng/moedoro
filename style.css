@@ -300,6 +300,50 @@ html, body {
   border-color: rgba(180, 200, 255, 0.5);
 }
 
+.setting-row select {
+  padding: 6px 12px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.setting-row select option {
+  background: #141628;
+  color: #fff;
+}
+
+.setting-row select:focus {
+  border-color: rgba(180, 200, 255, 0.5);
+}
+
+.btn-setting-action {
+  padding: 6px 14px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-setting-action:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(180, 200, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-setting-action:active {
+  transform: translateY(0);
+}
+
 .modal-buttons {
   display: flex;
   gap: 12px;
