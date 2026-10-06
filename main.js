@@ -1569,6 +1569,64 @@
   });
 
   /* ======================
+     PWA & Service Worker
+     ====================== */
+  let deferredPrompt = null;
+  const btnPwaInstall = document.getElementById('btn-pwa-install');
+  const rowPwaInstall = document.getElementById('row-pwa-install');
+  const btnModalInstall = document.getElementById('btn-modal-install');
+
+  function initPWA() {
+    // Service Worker 登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((registration) => {
+            console.log('[PWA] Service Worker registered with scope:', registration.scope);
+          })
+          .catch((err) => {
+            console.warn('[PWA] Service Worker registration failed:', err);
+          });
+      });
+    }
+
+    // PWA インストールプロンプト制御
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (btnPwaInstall) btnPwaInstall.style.display = 'inline-flex';
+      if (rowPwaInstall) rowPwaInstall.style.display = 'flex';
+    });
+
+    async function triggerInstall() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log('[PWA] Install prompt outcome:', outcome);
+      deferredPrompt = null;
+      if (btnPwaInstall) btnPwaInstall.style.display = 'none';
+      if (rowPwaInstall) rowPwaInstall.style.display = 'none';
+    }
+
+    if (btnPwaInstall) {
+      btnPwaInstall.addEventListener('click', triggerInstall);
+    }
+    if (btnModalInstall) {
+      btnModalInstall.addEventListener('click', () => {
+        triggerInstall();
+        closeSettings();
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      console.log('[PWA] Application successfully installed');
+      deferredPrompt = null;
+      if (btnPwaInstall) btnPwaInstall.style.display = 'none';
+      if (rowPwaInstall) rowPwaInstall.style.display = 'none';
+    });
+  }
+
+  /* ======================
      Initialization
      ====================== */
   function init() {
@@ -1581,6 +1639,7 @@
     calculateSchedule();
     updateTimerDisplay(true);
     updatePauseIcon();
+    initPWA();
 
     gsap.fromTo('#timer-split-container', { opacity: 0 }, { opacity: 1, duration: 1.5, ease: 'power2.out', delay: 0.3 });
     gsap.fromTo('#controls', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 1.2, ease: 'power2.out', delay: 0.6 });
