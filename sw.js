@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moedoro-pwa-v3';
+const CACHE_NAME = 'moedoro-pwa-v4';
 
 // 事前キャッシュするローカルおよび外部主要アセット
 const PRECACHE_ASSETS = [

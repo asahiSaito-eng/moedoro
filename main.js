@@ -781,34 +781,32 @@
   }
 
   /* ======================
-     Ambient Shooting Stars (夜空限定・超軽量・山や水面には一切表示されない)
+     Ambient Shooting Stars (夜空最上部限定・右上から左下に統一・高輝度発光・超軽量)
      ====================== */
   function spawnShootingStar() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const skyMaxY = h * 0.23; // ★夜空のみの絶対境界（山並みや女の子・水面より上空のみ）
+    const skyMaxY = h * 0.15; // ★背景画像の上部星空のみ（山・女の子・水面には一切入らない境界）
 
-    // 夜空の最上部（画面上部 0%〜14% エリア）から開始
-    const isFromRight = Math.random() < 0.65;
-    const startX = isFromRight 
-      ? w * (0.2 + Math.random() * 0.75)
-      : w * (0.05 + Math.random() * 0.5);
-    const startY = Math.random() * (h * 0.12) + 6;
+    // 画面右上エリア（X: 35%〜96%、Y: 2〜6.5%）からスタート
+    const startX = w * (0.35 + Math.random() * 0.60);
+    const startY = 3 + Math.random() * (h * 0.065);
 
-    // ほぼ水平に近い角度（山へ向かわず夜空を横切る）
-    const angle = isFromRight
-      ? Math.PI * (1.05 + Math.random() * 0.08) // ~189°〜~203°（左向き・わずかに斜め下）
-      : Math.PI * (0.05 + Math.random() * 0.08); // ~9°〜~23°（右向き・わずかに斜め下）
+    // ★右上から左下へ向かう軌道に100%統一（水平左向きから約 13°〜22° の緩やかな下向き傾斜）
+    const tilt = 0.23 + Math.random() * 0.15; // ラジアン (~13.1°〜~21.7°)
+    const speed = 19 + Math.random() * 7;      // 上品で滑らかな速さ
+    const vx = -Math.cos(tilt) * speed;        // 確実に左向き
+    const vy = Math.sin(tilt) * speed;         // 確実に下向き
+    const angle = Math.atan2(vy, vx);
 
-    const speed = 16 + Math.random() * 8; // 滑らかで自然な速度
-    const tailLen = 70 + Math.random() * 60; // 控えめで上品な光の尾
-    const maxLife = 22 + Math.floor(Math.random() * 10); // 約 0.35〜0.5秒の刹那的なきらめき
+    const tailLen = 110 + Math.random() * 65;  // 伸びやかな光の尾
+    const maxLife = 24 + Math.floor(Math.random() * 9); // 約 0.35〜0.45秒でスッと流れて消える
 
     shootingStars.push({
       x: startX,
       y: startY,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
+      vx: vx,
+      vy: vy,
       angle: angle,
       tailLen: tailLen,
       life: maxLife,
@@ -820,8 +818,8 @@
   }
 
   function scheduleNextShootingStar() {
-    // 5秒〜11秒ごとの静かで落ち着いたランダム間隔（タイマーに負荷を与えない）
-    const delay = 5000 + Math.random() * 6000;
+    // 4.5秒〜9.0秒ごとの静かで情緒的なランダム間隔
+    const delay = 4500 + Math.random() * 4500;
     shootingStarTimer = setTimeout(() => {
       spawnShootingStar();
       scheduleNextShootingStar();
@@ -838,7 +836,12 @@
   function renderTrails() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    trailCtx.clearRect(0, 0, w, h);
+    // 軽量化: アイドル時（破片飛行がない時）は夜空エリアのみクリアしてGPU負荷を最小限に抑制
+    if (activeTrails.length === 0 && sparkles.length === 0 && impactRings.length === 0) {
+      trailCtx.clearRect(0, 0, w, h * 0.16);
+    } else {
+      trailCtx.clearRect(0, 0, w, h);
+    }
 
     trailCtx.save();
     trailCtx.globalCompositeOperation = 'lighter'; // 加算合成で美しい光の重なり
@@ -987,11 +990,11 @@
       trailCtx.restore();
     }
 
-    // 4. 夜空限定・超軽量流れ星（山や水面には一切表示されない＆CPU負荷ゼロ）
+    // 4. 夜空最上部限定・高輝度発光流れ星（右上から左下・超軽量＆山や水面には一切表示されない）
     if (shootingStars.length > 0) {
-      const skyLimit = h * 0.23;
+      const skyLimit = h * 0.15; // ★背景画像の上部星空（山並み・女の子・水面より上空のみ）
       trailCtx.save();
-      // ★夜空の最上部（Y: 0 〜 skyLimit）のみに描画を完全クリップ（山や水面には1pxもはみ出さない）
+      // ★夜空の最上部（Y: 0 〜 skyLimit）のみに物理クリップ（山や水面・女の子には1pxもはみ出さない）
       trailCtx.beginPath();
       trailCtx.rect(0, 0, w, skyLimit);
       trailCtx.clip();
@@ -1008,32 +1011,62 @@
           continue;
         }
 
-        const progress = star.life / star.maxLife; // 1.0 -> 0.0
-        const alpha = progress > 0.8 ? (1.0 - progress) / 0.2 : (progress < 0.3 ? progress / 0.3 : 1.0);
+        const progress = star.life / star.maxLife; // 1.0 (出現) -> 0.0 (消滅)
+        // 出現時素早くフェードイン、終盤滑らかにフェードアウト
+        const alpha = progress > 0.85 ? (1.0 - progress) / 0.15 : (progress < 0.25 ? progress / 0.25 : 1.0);
 
-        const tailX = star.x - Math.cos(star.angle) * star.tailLen * progress;
-        const tailY = star.y - Math.sin(star.angle) * star.tailLen * progress;
+        // 移動に伴って美しく伸びる尾の長さ
+        const currentTailLen = star.tailLen * Math.min(1.0, (1.0 - progress) * 3.5) * (0.3 + 0.7 * progress);
+        const tailX = star.x - Math.cos(star.angle) * currentTailLen;
+        const tailY = star.y - Math.sin(star.angle) * currentTailLen;
 
-        // 1本のみの超軽量グラデーションライン
+        // ★鮮やかに光り輝くグラデーション（透明 ➔ 淡いサファイア ➔ 輝くシアン ➔ まばゆい純白）
         const grad = trailCtx.createLinearGradient(tailX, tailY, star.x, star.y);
-        grad.addColorStop(0.0, 'rgba(120, 200, 255, 0)');
-        grad.addColorStop(0.75, `rgba(210, 240, 255, ${0.75 * alpha})`);
+        grad.addColorStop(0.0, 'rgba(80, 180, 255, 0)');
+        grad.addColorStop(0.5, `rgba(130, 220, 255, ${0.45 * alpha})`);
+        grad.addColorStop(0.85, `rgba(200, 245, 255, ${0.9 * alpha})`);
         grad.addColorStop(1.0, `rgba(255, 255, 255, ${1.0 * alpha})`);
 
+        // 4-1. 外側の淡く輝くオーラ光芒（幅 5.5px で夜空に光の軌跡を広げる）
         trailCtx.beginPath();
         trailCtx.moveTo(tailX, tailY);
         trailCtx.lineTo(star.x, star.y);
         trailCtx.strokeStyle = grad;
-        trailCtx.lineWidth = 1.3;
+        trailCtx.lineWidth = 5.5;
         trailCtx.lineCap = 'round';
-        trailCtx.globalAlpha = alpha;
+        trailCtx.globalAlpha = 0.5 * alpha;
         trailCtx.stroke();
 
-        // 先端の微細な光点
+        // 4-2. 中心の鋭く眩しい純白コアビーム（幅 1.8px）
+        trailCtx.lineWidth = 1.8;
+        trailCtx.strokeStyle = '#ffffff';
+        trailCtx.globalAlpha = 1.0 * alpha;
+        trailCtx.stroke();
+
+        // 4-3. 先端の光核（外側の発光ハロー ＋ 中心の純白核）
         trailCtx.beginPath();
-        trailCtx.arc(star.x, star.y, 1.3, 0, Math.PI * 2);
-        trailCtx.fillStyle = '#ffffff';
+        trailCtx.arc(star.x, star.y, 4.2, 0, Math.PI * 2);
+        trailCtx.fillStyle = 'rgba(150, 230, 255, 0.6)';
+        trailCtx.globalAlpha = 0.7 * alpha;
         trailCtx.fill();
+
+        trailCtx.beginPath();
+        trailCtx.arc(star.x, star.y, 1.8, 0, Math.PI * 2);
+        trailCtx.fillStyle = '#ffffff';
+        trailCtx.globalAlpha = 1.0 * alpha;
+        trailCtx.fill();
+
+        // 4-4. 先端の十字スパークルフレア（キラッと輝く星の光芒）
+        const fLen = 4.5 * alpha;
+        trailCtx.beginPath();
+        trailCtx.moveTo(star.x - fLen, star.y);
+        trailCtx.lineTo(star.x + fLen, star.y);
+        trailCtx.moveTo(star.x, star.y - fLen);
+        trailCtx.lineTo(star.x, star.y + fLen);
+        trailCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        trailCtx.lineWidth = 1.0;
+        trailCtx.globalAlpha = 0.85 * alpha;
+        trailCtx.stroke();
       }
 
       trailCtx.restore();
