@@ -781,36 +781,28 @@
   }
 
   /* ======================
-     Ambient Shooting Stars (ランダムに夜空を駆ける幻想的な流星群)
+     Ambient Shooting Stars (夜空限定・超軽量・山や水面には一切表示されない)
      ====================== */
   function spawnShootingStar() {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    const skyMaxY = h * 0.23; // ★夜空のみの絶対境界（山並みや女の子・水面より上空のみ）
 
-    // 夜空のランダムな位置（画面上部 35% エリア）から開始
-    const isFromRight = Math.random() < 0.72; // 主に右上から左下へ、時折左上から右下へ
+    // 夜空の最上部（画面上部 0%〜14% エリア）から開始
+    const isFromRight = Math.random() < 0.65;
     const startX = isFromRight 
-      ? w * (0.25 + Math.random() * 0.7)
-      : w * (0.05 + Math.random() * 0.45);
-    const startY = Math.random() * (h * 0.32);
+      ? w * (0.2 + Math.random() * 0.75)
+      : w * (0.05 + Math.random() * 0.5);
+    const startY = Math.random() * (h * 0.12) + 6;
 
-    // 角度（ラジアン）
+    // ほぼ水平に近い角度（山へ向かわず夜空を横切る）
     const angle = isFromRight
-      ? Math.PI * (1.14 + Math.random() * 0.16) // ~205°〜~234°（斜め左下）
-      : Math.PI * (0.16 + Math.random() * 0.16); // ~28°〜~57°（斜め右下）
+      ? Math.PI * (1.05 + Math.random() * 0.08) // ~189°〜~203°（左向き・わずかに斜め下）
+      : Math.PI * (0.05 + Math.random() * 0.08); // ~9°〜~23°（右向き・わずかに斜め下）
 
-    const speed = 20 + Math.random() * 12; // 20〜32px / frame
-    const tailLen = 130 + Math.random() * 140; // 光の尾の長さ
-    const maxLife = 32 + Math.floor(Math.random() * 24); // 約 0.5〜0.9秒
-
-    // 幻想的な星空の光パレット
-    const palettes = [
-      { core: '#ffffff', mid: 'rgba(90, 240, 255, 0.95)', tail: 'rgba(120, 170, 255, 0)' },   // シアンブルー
-      { core: '#ffffff', mid: 'rgba(180, 210, 255, 0.95)', tail: 'rgba(90, 110, 245, 0)' },   // ダイヤモンドスカイ
-      { core: '#ffffff', mid: 'rgba(255, 170, 230, 0.95)', tail: 'rgba(210, 90, 240, 0)' },   // ローズマゼンタ
-      { core: '#ffffff', mid: 'rgba(255, 235, 150, 0.95)', tail: 'rgba(255, 180, 60, 0)' }    // スターライトゴールド
-    ];
-    const palette = palettes[Math.floor(Math.random() * palettes.length)];
+    const speed = 16 + Math.random() * 8; // 滑らかで自然な速度
+    const tailLen = 70 + Math.random() * 60; // 控えめで上品な光の尾
+    const maxLife = 22 + Math.floor(Math.random() * 10); // 約 0.35〜0.5秒の刹那的なきらめき
 
     shootingStars.push({
       x: startX,
@@ -821,21 +813,17 @@
       tailLen: tailLen,
       life: maxLife,
       maxLife: maxLife,
-      palette: palette
+      skyMaxY: skyMaxY
     });
 
     ensureRenderLoop();
   }
 
   function scheduleNextShootingStar() {
-    // 3.0秒〜7.5秒のランダム間隔で夜空に流星を降らせる
-    const delay = 3000 + Math.random() * 4500;
+    // 5秒〜11秒ごとの静かで落ち着いたランダム間隔（タイマーに負荷を与えない）
+    const delay = 5000 + Math.random() * 6000;
     shootingStarTimer = setTimeout(() => {
       spawnShootingStar();
-      // 18% の確率でツイン（連星）流星
-      if (Math.random() < 0.18) {
-        setTimeout(spawnShootingStar, 350 + Math.random() * 350);
-      }
       scheduleNextShootingStar();
     }, delay);
   }
@@ -999,74 +987,56 @@
       trailCtx.restore();
     }
 
-    // 4. ランダム流れ星（Shooting Stars）の描画
-    for (let i = shootingStars.length - 1; i >= 0; i--) {
-      const star = shootingStars[i];
-      star.x += star.vx;
-      star.y += star.vy;
-      star.life--;
-
-      const progress = star.life / star.maxLife; // 1.0 (開始) -> 0.0 (消滅)
-      // 登場時フェードインと終盤フェードアウト
-      let alpha = 1.0;
-      if (progress > 0.85) {
-        alpha = (1.0 - progress) / 0.15;
-      } else if (progress < 0.35) {
-        alpha = progress / 0.35;
-      }
-
-      if (star.life <= 0 || alpha <= 0.01) {
-        shootingStars.splice(i, 1);
-        continue;
-      }
-
-      // 尾の始点
-      const tailX = star.x - Math.cos(star.angle) * star.tailLen * (0.4 + 0.6 * progress);
-      const tailY = star.y - Math.sin(star.angle) * star.tailLen * (0.4 + 0.6 * progress);
-
-      // グラデーション（尾の先から星の核へ）
-      const grad = trailCtx.createLinearGradient(tailX, tailY, star.x, star.y);
-      grad.addColorStop(0.0, star.palette.tail);
-      grad.addColorStop(0.65, star.palette.mid);
-      grad.addColorStop(1.0, star.palette.core);
-
-      // 4-1. 尾のソフトオーラ
+    // 4. 夜空限定・超軽量流れ星（山や水面には一切表示されない＆CPU負荷ゼロ）
+    if (shootingStars.length > 0) {
+      const skyLimit = h * 0.23;
+      trailCtx.save();
+      // ★夜空の最上部（Y: 0 〜 skyLimit）のみに描画を完全クリップ（山や水面には1pxもはみ出さない）
       trailCtx.beginPath();
-      trailCtx.moveTo(tailX, tailY);
-      trailCtx.lineTo(star.x, star.y);
-      trailCtx.strokeStyle = grad;
-      trailCtx.lineWidth = 4.2;
-      trailCtx.lineCap = 'round';
-      trailCtx.globalAlpha = 0.45 * alpha;
-      trailCtx.stroke();
+      trailCtx.rect(0, 0, w, skyLimit);
+      trailCtx.clip();
 
-      // 4-2. 尾の中心コアライン
-      trailCtx.lineWidth = 1.6;
-      trailCtx.globalAlpha = 0.95 * alpha;
-      trailCtx.stroke();
+      for (let i = shootingStars.length - 1; i >= 0; i--) {
+        const star = shootingStars[i];
+        star.x += star.vx;
+        star.y += star.vy;
+        star.life--;
 
-      // 4-3. 先端の光核
-      trailCtx.beginPath();
-      trailCtx.arc(star.x, star.y, 2.2, 0, Math.PI * 2);
-      trailCtx.fillStyle = '#ffffff';
-      trailCtx.globalAlpha = 1.0 * alpha;
-      trailCtx.fill();
+        // 山の稜線（skyMaxY）に達したか、寿命が尽きたら即座に消滅
+        if (star.life <= 0 || star.y >= star.skyMaxY) {
+          shootingStars.splice(i, 1);
+          continue;
+        }
 
-      // 4-4. 飛翔中に後方へこぼれ落ちる瞬く星屑
-      if (Math.random() < 0.6) {
-        sparkles.push({
-          x: star.x - Math.cos(star.angle) * (Math.random() * 25),
-          y: star.y - Math.sin(star.angle) * (Math.random() * 25),
-          vx: (Math.random() - 0.5) * 0.8,
-          vy: 0.15 + Math.random() * 0.7,
-          size: 1.0 + Math.random() * 1.8,
-          type: Math.random() < 0.5 ? 'cyan' : 'white',
-          alpha: 0.8 * alpha,
-          decay: 0.026 + Math.random() * 0.02,
-          twinkle: Math.random() * Math.PI * 2,
-          twinkleSpeed: 0.3
-        });
+        const progress = star.life / star.maxLife; // 1.0 -> 0.0
+        const alpha = progress > 0.8 ? (1.0 - progress) / 0.2 : (progress < 0.3 ? progress / 0.3 : 1.0);
+
+        const tailX = star.x - Math.cos(star.angle) * star.tailLen * progress;
+        const tailY = star.y - Math.sin(star.angle) * star.tailLen * progress;
+
+        // 1本のみの超軽量グラデーションライン
+        const grad = trailCtx.createLinearGradient(tailX, tailY, star.x, star.y);
+        grad.addColorStop(0.0, 'rgba(120, 200, 255, 0)');
+        grad.addColorStop(0.75, `rgba(210, 240, 255, ${0.75 * alpha})`);
+        grad.addColorStop(1.0, `rgba(255, 255, 255, ${1.0 * alpha})`);
+
+        trailCtx.beginPath();
+        trailCtx.moveTo(tailX, tailY);
+        trailCtx.lineTo(star.x, star.y);
+        trailCtx.strokeStyle = grad;
+        trailCtx.lineWidth = 1.3;
+        trailCtx.lineCap = 'round';
+        trailCtx.globalAlpha = alpha;
+        trailCtx.stroke();
+
+        // 先端の微細な光点
+        trailCtx.beginPath();
+        trailCtx.arc(star.x, star.y, 1.3, 0, Math.PI * 2);
+        trailCtx.fillStyle = '#ffffff';
+        trailCtx.fill();
       }
+
+      trailCtx.restore();
     }
 
     trailCtx.restore();
@@ -1759,26 +1729,6 @@
   }
 
   /* ======================
-     Water Ripple Animation (穏やかな水面の揺らめき)
-     ====================== */
-  let waterTime = 0;
-  const waterTurbulence = document.getElementById('water-turbulence');
-
-  function initWaterAnimation() {
-    function animateWater() {
-      waterTime += 0.009; // 静かで心地よい波の速さ
-      // 緩やかな二重サイン波で周波数を優しく呼吸させる
-      const freqX = 0.012 + 0.003 * Math.sin(waterTime * 0.85);
-      const freqY = 0.038 + 0.007 * Math.cos(waterTime * 0.6);
-      if (waterTurbulence) {
-        waterTurbulence.setAttribute('baseFrequency', `${freqX.toFixed(5)} ${freqY.toFixed(5)}`);
-      }
-      requestAnimationFrame(animateWater);
-    }
-    animateWater();
-  }
-
-  /* ======================
      Initialization
      ====================== */
   function init() {
@@ -1792,9 +1742,7 @@
     updateTimerDisplay(true);
     updatePauseIcon();
     initPWA();
-    initWaterAnimation();     // 水面の波打ちアニメーション開始
-    scheduleNextShootingStar(); // 背景の流れ星スケジュール開始
-    setTimeout(spawnShootingStar, 1200); // 起動1.2秒後に最初の流星
+    scheduleNextShootingStar(); // 背景の流れ星スケジュール開始（夜空のみ・超軽量）
 
     gsap.fromTo('#timer-split-container', { opacity: 0 }, { opacity: 1, duration: 1.5, ease: 'power2.out', delay: 0.3 });
     gsap.fromTo('#controls', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 1.2, ease: 'power2.out', delay: 0.6 });

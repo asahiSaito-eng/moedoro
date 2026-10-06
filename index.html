@@ -17,25 +17,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Quicksand:wght@300;400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
   <!-- 背景画像 -->
   <div id="background"></div>
-
-  <!-- 水面の波打ちレイヤー & 光彩レイヤー -->
-  <div id="water-surface"></div>
-  <div id="water-shimmer"></div>
-
-  <!-- 水面リップル用 SVG フィルター -->
-  <svg id="water-filter-svg" style="position: absolute; width: 0; height: 0; pointer-events: none;" aria-hidden="true">
-    <defs>
-      <filter id="water-ripple" x="-5%" y="-5%" width="110%" height="110%" filterUnits="objectBoundingBox">
-        <feTurbulence id="water-turbulence" type="turbulence" baseFrequency="0.012 0.038" numOctaves="2" result="noise" seed="1" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="7.5" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </defs>
-  </svg>
 
   <!-- 流星・彗星の軌跡描画用キャンバス -->
   <canvas id="trail-canvas"></canvas>
@@ -165,6 +151,6 @@
 
   <!-- GSAP CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="main.js?v=18"></script>
+  <script src="main.js?v=19"></script>
 </body>
 </html>
